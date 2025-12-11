@@ -114,3 +114,24 @@
   border-top: 1px solid #ededed;
   background: #fcfcfc;
 }
+
+.todo-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.todo-clear {
+  border: 1px solid #ededed;
+  background: white;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.todo-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

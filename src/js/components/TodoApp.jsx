@@ -1,43 +1,87 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import TodoItem from "./TodoItem.jsx";
 
-
+const API = "https://playground.4geeks.com/todo";
+const USERNAME = "fabri03";
 
 const TodoApp = () => {
-
     const [tasks, setTasks] = useState([]);
-    const [inputValue, setInputValue] = useState("")
+    const [inputValue, setInputValue] = useState("");
 
-    const handleChange = (event) => {
-        setInputValue(event.target.value);
+
+    const createUser = () => {
+        return fetch(`${API}/users/${USERNAME}`, { method: "POST" });
     };
 
-    const handleKeyDown = (event) => {
-        if (event.key === "Enter") {
-            handleAddTask();
-        }
+
+    const loadTasks = () => {
+        return fetch(`${API}/users/${USERNAME}`)
+            .then((resp) => resp.json())
+            .then((data) => {
+
+                const serverTodos = Array.isArray(data.todos) ? data.todos : [];
+
+
+                const formatted = serverTodos.map((t) => ({
+                    id: t.id,
+                    text: t.label
+                }));
+
+                setTasks(formatted);
+            });
     };
+
+
+    useEffect(() => {
+        createUser()
+            .then(() => loadTasks())
+            .catch((err) => console.log(err));
+    }, []);
+
 
     const handleAddTask = () => {
         const text = inputValue.trim();
-
         if (text === "") return;
 
-        const newTask = {
-            id: Date.now(),
-            text: text,
-        };
+        const taskForServer = { label: text, is_done: false };
 
-        setTasks((prevTasks) => [...prevTasks, newTask]);
-
-        setInputValue("")
+        fetch(`${API}/todos/${USERNAME}`, {
+            method: "POST",
+            body: JSON.stringify(taskForServer),
+            headers: { "Content-Type": "application/json" }
+        })
+            .then((resp) => {
+                if (!resp.ok) throw new Error("POST falló: " + resp.status);
+                return resp.json();
+            })
+            .then(() => loadTasks())
+            .then(() => setInputValue(""))
+            .catch((err) => console.log(err));
     };
+
 
     const handleDeleteTask = (idToDelete) => {
-        setTasks((prevTasks) => prevTasks.filter(tasks => tasks.id !== idToDelete))
+        fetch(`${API}/todos/${idToDelete}`, { method: "DELETE" })
+            .then((resp) => {
+                if (!resp.ok) throw new Error("DELETE falló: " + resp.status);
+            })
+            .then(() => loadTasks())
+            .catch((err) => console.log(err));
     };
 
-    const itemsLeft = tasks.length
+
+    const handleClearAll = () => {
+        fetch(`${API}/users/${USERNAME}`, { method: "DELETE" })
+            .then(() => createUser())
+            .then(() => loadTasks())
+            .catch((err) => console.log(err));
+    };
+
+    const handleKeyDown = (event) => {
+        if (event.key === "Enter") handleAddTask();
+    };
+
+    const itemsLeft = tasks.length;
 
     return (
         <div className="todo-page">
@@ -49,7 +93,7 @@ const TodoApp = () => {
                     type="text"
                     placeholder="¿Qué tenemos que hacer?"
                     value={inputValue}
-                    onChange={handleChange}
+                    onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                 />
 
@@ -69,11 +113,12 @@ const TodoApp = () => {
                 </ul>
 
                 <div className="todo-footer">
-                    {itemsLeft === 1
-                        ? "1 item left"
-                        : `${itemsLeft} items left`}
-                </div>
+                    <span>{itemsLeft === 1 ? "1 item left" : `${itemsLeft} items left`}</span>
 
+                    <button onClick={handleClearAll}>
+                        Limpiar todo
+                    </button>
+                </div>
             </div>
         </div>
     );
